@@ -9,6 +9,19 @@ import(
 	"errors"
 )
 
+const(
+	pendingKey = "queue:emails:pending"
+	processingKey = "queue:emails:processing"
+)
+
+//helper function to create jobKey
+// claim.lua builds this same "job:emails:" prefix internally,
+// since it doesn't know the job ID until it pops it.
+func jobKey(id string)(string){
+	return "job:emails:" + id
+}
+
+
 var ErrNoJob=errors.New("no job available to claim")
 
 //go:embed scripts/enqueue.lua
@@ -38,8 +51,8 @@ func (q *Queue) Enqueue(ctx context.Context, payload string)(string, error){
 	jobID := uuid.NewString()
 
 	keys := []string{
-		"queue:emails:pending",
-		"job:emails:" + jobID,
+		pendingKey,
+		jobKey(jobID),
 	}
 
 	result,err := enqueueScript.Run(ctx ,q.rdb,keys,
@@ -57,8 +70,8 @@ func (q *Queue) Enqueue(ctx context.Context, payload string)(string, error){
 
 func (q *Queue) Claim(ctx context.Context,timeout int)(string,error){
 	keys :=[]string{
-		"queue:emails:pending",
-		"queue:emails:processing",
+		pendingKey,
+		processingKey,
 	}
 	jobID,err := claimScript.Run(ctx,q.rdb,keys,
 					time.Now().Unix(),
@@ -76,8 +89,8 @@ func (q *Queue) Claim(ctx context.Context,timeout int)(string,error){
 
 func (q *Queue) Ack(ctx context.Context,jobID string)(bool,error){
 	keys:= []string{
-		"queue:emails:processing",
-		"job:emails:"+jobID,
+		processingKey,
+		jobKey(jobID),
 	}
 
 	result,err :=ackScript.Run(ctx,q.rdb,keys,
