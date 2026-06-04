@@ -20,44 +20,14 @@ func main(){
 	
 	q :=queue.New(rdb)
 
-	// payloads :=[]string{
-	// 	`{"to":"alice"}`,
-	// 	`{"to":"bob"}`,
-	// 	`{"to":"carol"}`,
-	// }
-
-	job_count := 1000
-	for i:=0;i<job_count;i++{
-		payload := fmt.Sprintf(`{"n":%d}`, i)
-		_,err :=q.Enqueue(ctx,payload)
-		if err!=nil{
-			panic(err)
-		}
-	}
-
-	// for i:=0;i<4;i++{
-	// 	jobID,err := q.Claim(ctx,30)
-	// 	if errors.Is(err,queue.ErrNoJob){
-	// 		fmt.Println("no jobs to claim")
-	// 		break
-	// 	}
-	// 	if err!=nil{
-	// 		panic(err)
-	// 	}
-	// 	fmt.Println("claimed",jobID)
-	// 	ack,err :=q.Ack(ctx,jobID)
-	// 	if err!=nil{
-	// 		panic(err)
-	// 	}
-	// 	fmt.Println("ack:",ack)
-	// }
 	processed := 0
 	fmt.Println("worker started")
 	for{
-		jobID,err := q.Claim(ctx,30)
+		jobID,err := q.Claim(ctx,15)
 		if errors.Is(err,queue.ErrNoJob){
 			fmt.Println("queue empty, waiting for jobs, Processed",processed)
-			break
+			time.Sleep(2 * time.Second)
+			continue
 		}
 		if err!=nil{
 			fmt.Println("claim error: ",err)
@@ -65,8 +35,8 @@ func main(){
 			continue
 		}
 
-		fmt.Println("worker doing the job")
-		//time.Sleep(2* time.Second)
+		fmt.Println("CLAIMED", jobID, "— working (8s)...")
+		time.Sleep(8* time.Second)
 
 		ack,err := q.Ack(ctx,jobID)
 		if err!=nil{
